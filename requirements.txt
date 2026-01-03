@@ -7,3 +7,7 @@ deepgram-sdk>=5.0.0
 groq
 edge-tts
 python-dotenv
+# Desktop translator dependencies
+sounddevice
+numpy
+pygame
