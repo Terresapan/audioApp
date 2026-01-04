@@ -35,6 +35,14 @@
                     🗑️ 清除
                 </button>
             </div>
+            
+            <div class="audio-controls" style="margin-top: 15px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <select id="audioOutput" class="audio-select" onchange="changeAudioOutput()">
+                    <option value="">🔄 选择输出设备 (Speaker)...</option>
+                </select>
+                <button onclick="initAudioDevices()" style="margin: 0; padding: 5px 10px; font-size: 14px; background: #555;">🔄</button>
+            </div>
+
             <div class="connection-info">
                 <span id="connectionDot" class="dot disconnected"></span>
                 <span id="connectionText">未连接</span>

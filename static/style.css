@@ -254,3 +254,18 @@ footer {
         justify-content: center;
     }
 }
+.audio-select {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--bg-card);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+    min-width: 200px;
+}
+
+.audio-select:hover {
+    background: var(--bg-card);
+}
