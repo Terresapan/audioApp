@@ -1,5 +1,5 @@
 """
-Audio Bridge - Captures BlackHole audio and sends to web server.
+Audio Bridge - Captures BlackHole audio, sends to server, and plays translations.
 
 This script runs on the Mac host (not in Docker) because Docker 
 cannot access macOS audio devices.
@@ -18,18 +18,24 @@ import numpy as np
 import sounddevice as sd
 import websockets
 import ssl
+import json
+import miniaudio
 
 # Configuration
-WS_URL = "wss://localhost:5050/ws/audio?encoding=linear16"
+WS_AUDIO_URL = "wss://localhost:5050/ws/audio?encoding=linear16"
+WS_BROWSER_URL = "wss://localhost:5050/ws/browser"
 SAMPLE_RATE = 16000
 CHANNELS = 1
 CHUNK_DURATION = 0.25  # 250ms chunks
 
+# Global volume setting (can be updated via WebSocket)
+current_volume = 4.0  # Default: 4x boost
+
 # Create SSL context to trust self-signed certificate
-# This is necessary because we're using a self-signed cert on localhost
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
+
 
 def find_blackhole_device() -> int | None:
     """Find BlackHole audio device index."""
@@ -41,55 +47,111 @@ def find_blackhole_device() -> int | None:
     return None
 
 
-def list_audio_devices():
-    """List all available audio devices."""
-    print("\n🔊 Available audio devices:")
+def list_output_devices():
+    """List all available audio output devices."""
+    print("\n🔊 Available audio outputs:")
     devices = sd.query_devices()
+    valid = []
     for i, device in enumerate(devices):
-        if device['max_input_channels'] > 0:
-            marker = "👈" if 'blackhole' in device['name'].lower() else ""
-            print(f"   [{i}] {device['name']} {marker}")
+        if device['max_output_channels'] > 0:
+            print(f"   [{i}] {device['name']}")
+            valid.append(i)
+    return valid
 
 
-async def main():
-    print("=" * 60)
-    print("🎤 Audio Bridge - BlackHole → Web Server (Secure)")
-    print("=" * 60)
-    
-    list_audio_devices()
-    
-    blackhole_device = find_blackhole_device()
-    if blackhole_device is None:
-        print("\n❌ BlackHole not found!")
-        print("   Install: brew install blackhole-2ch")
-        print("   Then reboot your Mac")
-        return
-    
-    print(f"\n✅ Using BlackHole device [{blackhole_device}]")
-    print(f"🔌 Connecting to {WS_URL} (Secure)...")
+def select_output_device() -> int | None:
+    """Interactively select output device."""
+    valid_devices = list_output_devices()
+    try:
+        selection = input("\n👉 Enter the ID of your Earbuds (e.g. 2): ")
+        device_id = int(selection)
+        if device_id in valid_devices:
+            return device_id
+        else:
+            print("Invalid ID.")
+            return None
+    except ValueError:
+        print("Invalid input.")
+        return None
+
+
+def decode_mp3_to_pcm(mp3_bytes: bytes) -> tuple[np.ndarray, int, int]:
+    """Decode MP3 bytes to PCM samples using miniaudio."""
+    global current_volume
+    decoded = miniaudio.decode(mp3_bytes, output_format=miniaudio.SampleFormat.SIGNED16)
+    samples = np.frombuffer(decoded.samples, dtype=np.int16)
+    # Convert to float32 for sounddevice (range -1 to 1)
+    samples_float = samples.astype(np.float32) / 32768.0
+    # Apply volume boost and clip to prevent distortion
+    samples_float = np.clip(samples_float * current_volume, -1.0, 1.0)
+    # Reshape to (frames, channels) if stereo
+    if decoded.nchannels > 1:
+        samples_float = samples_float.reshape(-1, decoded.nchannels)
+    return samples_float, decoded.sample_rate, decoded.nchannels
+
+
+async def tts_receiver(output_device_id: int):
+    """Receive TTS audio from server and play to selected device."""
+    print(f"🎧 TTS Receiver connecting (output: device [{output_device_id}])...")
     
     try:
-        async with websockets.connect(WS_URL, ssl=ssl_context) as ws:
-            print("✅ Connected to web server!")
-            print("\n🎧 Instructions:")
-            print("   1. Set Mac output to 'Multi-Output Device'")
-            print("   2. Open http://localhost:5050 in browser")
-            print("   3. Play a YouTube video")
-            print("\nPress Ctrl+C to stop.\n")
+        async with websockets.connect(WS_BROWSER_URL, ssl=ssl_context, ping_interval=None) as ws:
+            print("✅ TTS Receiver connected!")
+            
+            while True:
+                message = await ws.recv()
+                
+                if isinstance(message, bytes):
+                    # MP3 audio data - decode and play
+                    try:
+                        samples, sample_rate, nchannels = decode_mp3_to_pcm(message)
+                        frames = len(samples) if nchannels == 1 else len(samples)
+                        print(f"🔈 Playing {frames} frames @ {sample_rate}Hz ({nchannels}ch) to device [{output_device_id}]")
+                        # Non-blocking play - don't wait, let it overlap if needed
+                        sd.play(samples, samplerate=sample_rate, device=output_device_id)
+                        # Use asyncio.sleep instead of sd.wait() to avoid blocking
+                        # Approximate duration
+                        duration = len(samples) / sample_rate if nchannels == 1 else len(samples) / sample_rate
+                        await asyncio.sleep(duration + 0.1)  # Small buffer
+                    except Exception as e:
+                        print(f"❌ Decode/play error: {e}")
+                else:
+                    # JSON message (translation text, status, volume)
+                    try:
+                        global current_volume
+                        data = json.loads(message)
+                        if data.get('type') == 'translation':
+                            print(f"\n🧠 翻译: {data['translation']}")
+                        elif data.get('type') == 'volume':
+                            current_volume = data.get('value', 2.0)
+                            print(f"🔊 Volume updated to: {current_volume}x")
+                    except:
+                        pass
+                        
+    except Exception as e:
+        print(f"❌ TTS Receiver error: {e}")
+
+
+async def audio_sender(blackhole_device: int):
+    """Capture BlackHole audio and send to server."""
+    print(f"🎤 Audio Sender connecting (input: BlackHole [{blackhole_device}])...")
+    
+    try:
+        async with websockets.connect(WS_AUDIO_URL, ssl=ssl_context) as ws:
+            print("✅ Audio Sender connected!")
             
             loop = asyncio.get_running_loop()
-            audio_chunk_count = [0]
+            chunk_count = [0]
             
             def audio_callback(indata, frames, time_info, status):
                 if status:
-                    print(f"Audio status: {status}")
+                    print(f"Status: {status}")
                 
-                audio_chunk_count[0] += 1
-                if audio_chunk_count[0] % 40 == 0:
+                chunk_count[0] += 1
+                if chunk_count[0] % 40 == 0:
                     level = np.abs(indata).max()
-                    print(f"📊 Audio level: {level:.4f} (chunks: {audio_chunk_count[0]})")
+                    print(f"📊 Audio level: {level:.4f} (chunks: {chunk_count[0]})")
                 
-                # Convert to 16-bit PCM bytes
                 audio_bytes = (indata * 32767).astype(np.int16).tobytes()
                 asyncio.run_coroutine_threadsafe(ws.send(audio_bytes), loop)
             
@@ -105,14 +167,45 @@ async def main():
                 while True:
                     await asyncio.sleep(1)
                     
-    except ConnectionRefusedError:
-        print(f"\n❌ Cannot connect to {WS_URL}")
-        print("   Make sure web_server.py is running first!")
-    except websockets.exceptions.ConnectionClosed:
-        print("\n🔌 Connection to server closed")
-    except KeyboardInterrupt:
-        print("\n\n👋 Stopping audio bridge...")
+    except Exception as e:
+        print(f"❌ Audio Sender error: {e}")
+
+
+async def main():
+    print("=" * 60)
+    print("🎤 Audio Bridge - With Translation Playback")
+    print("=" * 60)
+    
+    # 1. Find BlackHole for input
+    blackhole_device = find_blackhole_device()
+    if blackhole_device is None:
+        print("❌ BlackHole not found! Install with: brew install blackhole-2ch")
+        return
+    print(f"\n✅ Input: BlackHole [{blackhole_device}]")
+    
+    # 2. Select output device for translations (Earbuds)
+    output_device = select_output_device()
+    if output_device is None:
+        print("❌ No output device selected. Exiting.")
+        return
+    print(f"✅ Output: Device [{output_device}]")
+    
+    print("\n🎧 Instructions:")
+    print("   1. Set Mac output to 'YouTube Translator' (Multi-Output)")
+    print("   2. Mute the browser tab (optional - to avoid double audio)")
+    print("   3. Play a YouTube video")
+    print("\nPress Ctrl+C to stop.\n")
+    
+    # 3. Run both sender and receiver concurrently
+    print("🚀 Starting Bridge...")
+    await asyncio.gather(
+        audio_sender(blackhole_device),
+        tts_receiver(output_device)
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n\n👋 Stopping audio bridge...")

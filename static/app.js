@@ -9,12 +9,10 @@ let audioQueue = [];
 let isPlaying = false;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
-let selectedAudioOutputId = "";
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     connect();
-    initAudioDevices();
 });
 
 // WebSocket Connection
@@ -66,60 +64,13 @@ function attemptReconnect() {
     }
 }
 
-// Audio Device Handling
-async function initAudioDevices() {
-    console.log("Enumerating audio devices...");
-    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        alert("Your browser does not support selecting audio output.");
-        return;
+// Volume Control
+function updateVolume(value) {
+    document.getElementById('volumeValue').textContent = value + 'x';
+    // Send volume update to server (which broadcasts to audio_bridge)
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'volume', value: parseFloat(value) }));
     }
-    
-    // Request permission to see device labels if needed
-    try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (e) {
-        console.warn("Microphone permission denied", e);
-        // We continue anyway, maybe labels are hidden but IDs exist, or maybe it fails completely.
-        // We'll see what enumerateDevices returns.
-    }
-
-    try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioOutputs = devices.filter(device => device.kind === 'audiooutput');
-        const select = document.getElementById('audioOutput');
-        
-        console.log("Audio Outputs found:", audioOutputs);
-        
-        if (audioOutputs.length === 0) {
-             alert("No speaker devices found! Check browser permissions.");
-        }
-
-        // Clear existing options except default
-        while (select.options.length > 1) {
-            select.remove(1);
-        }
-        
-        audioOutputs.forEach(device => {
-            const label = device.label || `Speaker (ID: ${device.deviceId.substring(0,5)}...)`;
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.text = label;
-            select.appendChild(option);
-        });
-        
-        // Restore selection if exists
-        if (selectedAudioOutputId) {
-             select.value = selectedAudioOutputId;
-        }
-
-    } catch (err) {
-        console.error("Error listing audio devices:", err);
-        alert("Error listing devices: " + err.message);
-    }
-}
-
-function changeAudioOutput() {
-    selectedAudioOutputId = document.getElementById('audioOutput').value;
 }
 
 // Message Handlers
@@ -138,50 +89,9 @@ function handleMessage(msg) {
 }
 
 function handleAudio(audioBlob) {
-    if (isMuted) return;
-    
-    audioQueue.push(audioBlob);
-    if (!isPlaying) {
-        playNextAudio();
-    }
-}
-
-async function playNextAudio() {
-    if (audioQueue.length === 0) {
-        isPlaying = false;
-        return;
-    }
-    
-    isPlaying = true;
-    const audioBlob = audioQueue.shift();
-    const audioUrl = URL.createObjectURL(new Blob([audioBlob], { type: 'audio/mpeg' }));
-    const audio = new Audio(audioUrl);
-    
-    // Apply selected output device
-    if (selectedAudioOutputId && typeof audio.setSinkId === 'function') {
-        try {
-            await audio.setSinkId(selectedAudioOutputId);
-        } catch (e) {
-            console.error('Error setting sinkId:', e);
-        }
-    }
-    
-    audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        playNextAudio();
-    };
-    
-    audio.onerror = () => {
-        console.error('Audio playback error');
-        playNextAudio();
-    };
-    
-    try {
-        await audio.play();
-    } catch (e) {
-        console.error('Play failed:', e);
-        playNextAudio();
-    }
+    // Audio is now handled by Python receiver, not browser
+    // This function kept for compatibility but we don't play in browser
+    console.log("Audio received (handled by Python)");
 }
 
 // UI Updates

@@ -36,11 +36,18 @@
                 </button>
             </div>
             
-            <div class="audio-controls" style="margin-top: 15px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <select id="audioOutput" class="audio-select" onchange="changeAudioOutput()">
-                    <option value="">🔄 选择输出设备 (Speaker)...</option>
-                </select>
-                <button onclick="initAudioDevices()" style="margin: 0; padding: 5px 10px; font-size: 14px; background: #555;">🔄</button>
+            <div class="volume-control" style="margin-top: 20px; text-align: center;">
+                <label for="volumeSlider" style="color: var(--text-secondary); font-size: 0.9rem;">
+                    🔊 音量调节
+                </label>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px;">
+                    <span style="font-size: 1.2rem;">🔈</span>
+                    <input type="range" id="volumeSlider" min="2" max="6" step="0.5" value="4" 
+                           style="width: 200px; cursor: pointer;"
+                           onchange="updateVolume(this.value)">
+                    <span style="font-size: 1.2rem;">🔊</span>
+                    <span id="volumeValue" style="color: var(--text-primary); min-width: 40px;">4.0x</span>
+                </div>
             </div>
 
             <div class="connection-info">

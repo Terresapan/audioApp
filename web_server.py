@@ -145,6 +145,15 @@ async def browser_websocket(websocket: WebSocket):
                         pass
                     manager.audio_source = None
                 await manager.broadcast_status("⏹️ Translation stopped by user")
+            elif msg.get("type") == "volume":
+                # Broadcast volume update to all clients (including audio_bridge)
+                volume = msg.get("value", 2.0)
+                print(f"🔊 Volume updated to: {volume}x")
+                for ws in manager.browser_connections:
+                    try:
+                        await ws.send_text(json.dumps({"type": "volume", "value": volume}))
+                    except:
+                        pass
     except WebSocketDisconnect:
         manager.disconnect_browser(websocket)
 
