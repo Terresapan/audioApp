@@ -119,6 +119,11 @@ async def root():
     return FileResponse("static/index.html")
 
 
+@app.get("/mobile")
+async def mobile():
+    return FileResponse("templates/index.html")
+
+
 @app.websocket("/ws/browser")
 async def browser_websocket(websocket: WebSocket):
     """WebSocket endpoint for browser clients to receive translations."""
@@ -149,25 +154,45 @@ async def audio_websocket(websocket: WebSocket):
     """WebSocket endpoint for audio input (from audio_bridge.py or mobile mic)."""
     await websocket.accept()
     manager.audio_source = websocket  # Store reference for stop command
-    print("🎤 Audio source connected")
+    
+    # Check if this is a mobile client (vs audio_bridge)
+    # Audio bridge sends linear16 param. Mobile sends default/webm.
+    # If mobile, add to browser_connections so it receives the translations back!
+    encoding_param = websocket.query_params.get("encoding")
+    is_mobile = encoding_param != "linear16"
+    
+    if is_mobile:
+        manager.browser_connections.add(websocket)
+        print("📱 Mobile client connected (receiving translations)")
+    else:
+        print("🎤 Audio bridge connected (input only)")
+    
     await manager.broadcast_status("🎤 Audio source connected")
     
     sentence_buffer = []
     
+    # Determine Deepgram options based on client type
+    # audio_bridge.py sends raw PCM (linear16), Mobile sends WebM/Opus (auto-detect)
+    encoding_param = websocket.query_params.get("encoding")
+    
+    deepgram_options = {
+        "model": "nova-3",
+        "language": "en-US",
+        "smart_format": "true",
+        "punctuate": "true",
+        "interim_results": "true",
+        "endpointing": 500,
+        "utterance_end_ms": 1500,
+        "channels": "1"
+    }
+    
+    if encoding_param == "linear16":
+        deepgram_options["encoding"] = "linear16"
+        deepgram_options["sample_rate"] = "16000"
+    
     try:
         # Create Deepgram connection
-        async with deepgram.listen.v1.connect(
-            model="nova-3",
-            language="en-US",
-            smart_format="true",
-            punctuate="true",
-            interim_results="true",
-            endpointing=500,
-            utterance_end_ms=1500,
-            encoding="linear16",
-            sample_rate="16000",
-            channels="1"
-        ) as dg_connection:
+        async with deepgram.listen.v1.connect(**deepgram_options) as dg_connection:
             
             async def on_message(result):
                 nonlocal sentence_buffer
@@ -226,6 +251,8 @@ async def audio_websocket(websocket: WebSocket):
         print(f"❌ Audio connection error: {e}")
     finally:
         print("🎤 Audio source disconnected")
+        if is_mobile:
+            manager.disconnect_browser(websocket)
         await manager.broadcast_status("🎤 Audio source disconnected")
 
 
@@ -286,4 +313,4 @@ async def generate_audio(text: str) -> bytes | None:
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host="0.0.0.0", port=PORT, ssl_keyfile="key.pem", ssl_certfile="cert.pem")

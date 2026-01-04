@@ -17,13 +17,19 @@ import asyncio
 import numpy as np
 import sounddevice as sd
 import websockets
+import ssl
 
 # Configuration
-WS_URL = "ws://localhost:5050/ws/audio"
+WS_URL = "wss://localhost:5050/ws/audio?encoding=linear16"
 SAMPLE_RATE = 16000
 CHANNELS = 1
 CHUNK_DURATION = 0.25  # 250ms chunks
 
+# Create SSL context to trust self-signed certificate
+# This is necessary because we're using a self-signed cert on localhost
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
 
 def find_blackhole_device() -> int | None:
     """Find BlackHole audio device index."""
@@ -47,7 +53,7 @@ def list_audio_devices():
 
 async def main():
     print("=" * 60)
-    print("🎤 Audio Bridge - BlackHole → Web Server")
+    print("🎤 Audio Bridge - BlackHole → Web Server (Secure)")
     print("=" * 60)
     
     list_audio_devices()
@@ -60,10 +66,10 @@ async def main():
         return
     
     print(f"\n✅ Using BlackHole device [{blackhole_device}]")
-    print(f"🔌 Connecting to {WS_URL}...")
+    print(f"🔌 Connecting to {WS_URL} (Secure)...")
     
     try:
-        async with websockets.connect(WS_URL) as ws:
+        async with websockets.connect(WS_URL, ssl=ssl_context) as ws:
             print("✅ Connected to web server!")
             print("\n🎧 Instructions:")
             print("   1. Set Mac output to 'Multi-Output Device'")

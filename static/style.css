@@ -181,14 +181,14 @@ footer {
 }
 
 .btn-stop {
-    background: var(--error);
-    color: white;
+    background: var(--bg-secondary);
+    color: var(--error);
     font-size: 1.1rem;
     padding: 15px 30px;
 }
 
 .btn-stop:hover {
-    background: #dc2626;
+    background: var(--bg-card);
     transform: scale(1.02);
 }
 

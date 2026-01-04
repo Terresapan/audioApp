@@ -8,6 +8,7 @@
         button { padding: 20px 40px; font-size: 20px; border-radius: 50px; border: none; cursor: pointer; margin-top: 50px; }
         .start { background-color: #4CAF50; color: white; }
         .stop { background-color: #f44336; color: white; display: none; }
+        .clear { background-color: #555; color: white; padding: 15px 30px; font-size: 18px; display: block; margin: 30px auto; }
         #status { margin-top: 20px; font-size: 18px; color: #aaa; }
     </style>
 </head>
@@ -17,6 +18,9 @@
 
     <button id="startBtn" class="start" onclick="startTranslation()">开始收听</button>
     <button id="stopBtn" class="stop" onclick="stopTranslation()">停止</button>
+    <button id="clearBtn" class="clear" onclick="clearTranslation()">🗑️ 清除翻译</button>
+    
+    <div id="translationText" style="margin: 30px 20px; font-size: 24px; font-weight: bold; min-height: 50px;"></div>
     
     <div id="status">准备就绪</div>
 
@@ -40,7 +44,7 @@
                 
                 // 2. Open WebSocket to your computer
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+                socket = new WebSocket(`${protocol}//${window.location.host}/ws/audio`);
 
                 socket.onopen = () => {
                     document.getElementById('status').innerText = "🔴 正在收听...";
@@ -88,9 +92,23 @@
                 }
                 
                 socket.onmessage = async (event) => {
-                    audioQueue.push(event.data);
-                    if (!isPlaying) {
-                        playNextAudio();
+                    if (typeof event.data === "string") {
+                        try {
+                            const msg = JSON.parse(event.data);
+                            if (msg.type === 'translation') {
+                                document.getElementById('translationText').innerText = msg.translation;
+                            } else if (msg.type === 'status') {
+                                document.getElementById('status').innerText = msg.message;
+                            }
+                        } catch (e) {
+                            console.error("Error parsing message:", e);
+                        }
+                    } else {
+                        // Binary data is audio
+                        audioQueue.push(event.data);
+                        if (!isPlaying) {
+                            playNextAudio();
+                        }
                     }
                 };
                 
@@ -114,6 +132,10 @@
             if (mediaRecorder) mediaRecorder.stop();
             if (socket) socket.close();
             resetUI();
+        }
+
+        function clearTranslation() {
+            document.getElementById('translationText').innerText = "";
         }
 
         function resetUI() {

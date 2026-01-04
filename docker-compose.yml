@@ -8,5 +8,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./static:/app/static
+      - ./templates:/app/templates
+      - ./cert.pem:/app/cert.pem
+      - ./key.pem:/app/key.pem
       - ./web_server.py:/app/web_server.py
     command: python -u web_server.py
