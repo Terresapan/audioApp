@@ -38,6 +38,12 @@ SAMPLE_RATE = 16000
 CHANNELS = 1
 CHUNK_DURATION = 0.25  # seconds
 
+# Translation chunking thresholds (Lecture Mode - optimized for accuracy)
+# Larger chunks = better context for translation quality
+MIN_WORDS_SENTENCE = 10    # Minimum words when sentence ends with . ! ?
+MIN_WORDS_PAUSE = 25       # Minimum words on natural pause
+FORCE_TRANSLATE_WORDS = 40 # Force translate at this many words
+
 def list_audio_devices():
     """List all available audio input/output devices."""
     print("\n📢 Available Audio Devices:")
@@ -76,7 +82,7 @@ async def translate_text(text: str) -> str:
     """Translate English text to Chinese using Groq."""
     try:
         completion = await groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",  # Higher rate limits: 14.4K req/day, 500K tokens/day
             messages=[
                 {
                     "role": "system", 
@@ -159,12 +165,16 @@ async def main():
         print("   2. Reboot your Mac")
         print("   3. Configure Multi-Output Device in Audio MIDI Setup")
         return
-    
     print("\n🎧 Instructions:")
     print("   1. Set your Mac output to 'Multi-Output Device'")
     print("   2. Connect Dad's Bluetooth earbuds")
     print("   3. Play a YouTube video in English")
-    print("   4. Dad will hear Chinese translation through earbuds!")
+    print("   4. Dad will hear Chinese translation!")
+    
+    print("\n📚 Lecture Mode (optimized for accuracy)")
+    print(f"   Min words (sentence): {MIN_WORDS_SENTENCE}")
+    print(f"   Min words (pause): {MIN_WORDS_PAUSE}")
+    print(f"   Force translate at: {FORCE_TRANSLATE_WORDS} words")
     print("\nPress Ctrl+C to stop.\n")
     
     # Buffer for accumulating transcription
@@ -178,11 +188,13 @@ async def main():
         print("🔌 Connecting to Deepgram...")
         
         async with deepgram.listen.v1.connect(
-            model="nova-2",
+            model="nova-3",           # Upgraded: 54% lower WER, better for noisy audio
             language="en-US",
             smart_format="true",
             punctuate="true",
             interim_results="true",
+            endpointing=500,          # 500ms silence triggers speech_final (default 10ms too fast)
+            utterance_end_ms=1500,    # 1.5s word gap for UtteranceEnd (ignores background noise)
             encoding="linear16",
             sample_rate="16000",
             channels="1"
@@ -206,6 +218,26 @@ async def main():
             
             async def on_message(result):
                 nonlocal sentence_buffer
+                
+                # Handle UtteranceEnd event (triggered by utterance_end_ms)
+                # This fires when there's a 1.5s gap in words - useful in noisy environments
+                if hasattr(result, 'type') and getattr(result, 'type', None) == 'UtteranceEnd':
+                    if sentence_buffer:
+                        full_text = " ".join(sentence_buffer)
+                        word_count = len(full_text.split())
+                        # Skip short utterances - often garbage STT from noise
+                        if word_count < 8:
+                            print(f"\n⏭️ Skipped short UtteranceEnd ({word_count} words): {full_text}")
+                            sentence_buffer = []
+                            return
+                        print(f"\n🔇 UtteranceEnd ({word_count} words): {full_text}")
+                        sentence_buffer = []
+                        translation = await translate_text(full_text)
+                        if translation:
+                            print(f"🧠 Translated: {translation}")
+                            await speak_chinese(translation)
+                    return
+                
                 if isinstance(result, ListenV1ResultsEvent):
                     if result.channel and result.channel.alternatives:
                         sentence = result.channel.alternatives[0].transcript
@@ -218,11 +250,8 @@ async def main():
                             has_ending = any(full_text.rstrip().endswith(p) for p in ['.', '!', '?'])
                             is_speech_final = result.speech_final if result.speech_final is not None else False
                             
-                            # Only translate when we have enough words:
-                            # - Sentence ending with at least 5 words, OR
-                            # - Natural pause with at least 15 words, OR
-                            # - Accumulated 25+ words (force translate)
-                            should_translate = (has_ending and word_count >= 5) or (is_speech_final and word_count >= 15) or word_count >= 25
+                            # Use fixed thresholds for chunking (Lecture Mode)
+                            should_translate = (has_ending and word_count >= MIN_WORDS_SENTENCE) or (is_speech_final and word_count >= MIN_WORDS_PAUSE) or word_count >= FORCE_TRANSLATE_WORDS
                             
                             if should_translate:
                                 print(f"\n👂 Heard ({word_count} words): {full_text}")
@@ -275,6 +304,14 @@ async def main():
                     
     except KeyboardInterrupt:
         print("\n\n👋 Stopping translator...")
+        # Send CloseStream to flush any buffered audio before closing
+        try:
+            import json
+            await dg_connection._send(json.dumps({"type": "CloseStream"}))
+            await asyncio.sleep(0.5)  # Brief wait for final response
+            print("✅ CloseStream sent - audio flushed")
+        except:
+            pass  # Connection may already be closed
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback

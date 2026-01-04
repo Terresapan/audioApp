@@ -38,7 +38,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # Create a WebSocket connection to Deepgram using v5.3.0 API
         # Note: Browser sends audio/webm (opus codec), Deepgram auto-detects container formats
         async with deepgram.listen.v1.connect(
-            model="nova-2",           # Nova-2 is more stable for general content
+            model="nova-3",           # Upgraded: 54% lower WER, better accuracy
             language="en-US",
             smart_format="true",
             punctuate="true",
