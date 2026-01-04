@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>Dad's Translator</title>
+    <title>爸爸的翻译器</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #222; color: white; }
@@ -12,13 +12,13 @@
     </style>
 </head>
 <body>
-    <h1>🇨🇳 Dad's Translator</h1>
-    <p>Put phone next to speaker</p>
+    <h1>🇨🇳 爸爸的翻译器 🇺🇸</h1>
+    <p>把手机放在扬声器旁边</p>
 
-    <button id="startBtn" class="start" onclick="startTranslation()">Start Listening</button>
-    <button id="stopBtn" class="stop" onclick="stopTranslation()">Stop</button>
+    <button id="startBtn" class="start" onclick="startTranslation()">开始收听</button>
+    <button id="stopBtn" class="stop" onclick="stopTranslation()">停止</button>
     
-    <div id="status">Ready</div>
+    <div id="status">准备就绪</div>
 
     <script>
         let socket;
@@ -27,12 +27,12 @@
         async function startTranslation() {
             // Check if we're in a secure context (HTTPS required for microphone on mobile)
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                document.getElementById('status').innerText = "❌ HTTPS required for microphone access. See instructions below.";
+                document.getElementById('status').innerText = "❌ 需要HTTPS才能使用麦克风";
                 document.getElementById('status').style.color = "#f44336";
                 return;
             }
             
-            document.getElementById('status').innerText = "Connecting...";
+            document.getElementById('status').innerText = "连接中...";
             
             try {
                 // 1. Request Microphone
@@ -43,7 +43,7 @@
                 socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
                 socket.onopen = () => {
-                    document.getElementById('status').innerText = "🔴 Listening...";
+                    document.getElementById('status').innerText = "🔴 正在收听...";
                     document.getElementById('startBtn').style.display = 'none';
                     document.getElementById('stopBtn').style.display = 'inline-block';
                     
@@ -99,7 +99,7 @@
                 };
                 
                 socket.onerror = (error) => {
-                    document.getElementById('status').innerText = "❌ WebSocket Error";
+                    document.getElementById('status').innerText = "❌ WebSocket 错误";
                     console.error("WebSocket error:", error);
                     resetUI();
                 };
@@ -117,7 +117,7 @@
         }
 
         function resetUI() {
-            document.getElementById('status').innerText = "Stopped";
+            document.getElementById('status').innerText = "已停止";
             document.getElementById('startBtn').style.display = 'inline-block';
             document.getElementById('stopBtn').style.display = 'none';
         }

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爸爸的翻译器</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🇨🇳 <span class="title-text">爸爸的翻译器</span> 🇺🇸</h1>
+            <div id="status" class="status">准备就绪</div>
+        </header>
+        
+        <main>
+            <!-- Translation Display -->
+            <div id="translations" class="translations">
+                <div class="placeholder">
+                    <p>翻译内容将显示在这里</p>
+                    <p class="hint">开始播放音频即可翻译</p>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <div class="controls">
+                <button id="stopBtn" class="btn btn-stop" onclick="stopTranslation()">
+                    ⏹️ 停止翻译
+                </button>
+                <button id="muteBtn" class="btn btn-mute" onclick="toggleMute()">
+                    🔊 声音开
+                </button>
+                <button id="clearBtn" class="btn btn-clear" onclick="clearTranslations()">
+                    🗑️ 清除
+                </button>
+            </div>
+            <div class="connection-info">
+                <span id="connectionDot" class="dot disconnected"></span>
+                <span id="connectionText">未连接</span>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="/static/app.js"></script>
+</body>
+</html>

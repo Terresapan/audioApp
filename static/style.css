@@ -1,0 +1,256 @@
+/* Dad's Translator - Styles */
+
+:root {
+    --bg-primary: #0f0f1a;
+    --bg-secondary: #1a1a2e;
+    --bg-card: #252542;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b0;
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.3);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    width: 100%;
+}
+
+/* Header */
+header {
+    text-align: center;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--bg-card);
+}
+
+header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+header h1 .title-text {
+    background: linear-gradient(135deg, #fff, #a0a0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.status {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    display: inline-block;
+}
+
+/* Main Content */
+main {
+    flex: 1;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+
+.translations {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.placeholder {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.placeholder p {
+    margin-bottom: 10px;
+}
+
+.placeholder .hint {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+/* Translation Card */
+.translation-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 20px;
+    animation: slideIn 0.3s ease;
+    border-left: 4px solid var(--accent);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.translation-chinese {
+    font-size: 1.8rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.translation-english {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Footer */
+footer {
+    padding: 20px 0;
+    border-top: 1px solid var(--bg-card);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-mute {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.btn-mute:hover {
+    background: var(--bg-card);
+}
+
+.btn-mute.muted {
+    background: var(--error);
+    color: white;
+}
+
+.btn-clear {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.btn-clear:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.btn-stop {
+    background: var(--error);
+    color: white;
+    font-size: 1.1rem;
+    padding: 15px 30px;
+}
+
+.btn-stop:hover {
+    background: #dc2626;
+    transform: scale(1.02);
+}
+
+/* Connection Status */
+.connection-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: background 0.3s ease;
+}
+
+.dot.connected {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.dot.disconnected {
+    background: var(--error);
+}
+
+.dot.connecting {
+    background: var(--warning);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+    
+    header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .translation-chinese {
+        font-size: 1.4rem;
+    }
+    
+    footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .controls {
+        justify-content: center;
+    }
+    
+    .connection-info {
+        justify-content: center;
+    }
+}
