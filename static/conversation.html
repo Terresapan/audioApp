@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>对话翻译 | Conversation Translator</title>
+    <link rel="stylesheet" href="/static/conversation.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🇨🇳 对话翻译 🇺🇸</h1>
+            <p class="subtitle">爸爸 ↔️ 朋友</p>
+            <div id="status" class="status">准备就绪 Ready</div>
+        </header>
+
+        <main>
+            <!-- Conversation History -->
+            <div id="conversation" class="conversation">
+                <div class="placeholder" id="placeholder">
+                    <p>👇 点击下方按钮开始对话</p>
+                    <p class="hint">Tap a button below to start</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <!-- Mode Buttons -->
+            <div class="mode-buttons">
+                <button id="dadBtn" class="btn btn-dad" ontouchstart="startRecording('dad')" ontouchend="stopRecording()" onmousedown="startRecording('dad')" onmouseup="stopRecording()">
+                    <span class="btn-icon">🎤</span>
+                    <span class="btn-label">爸爸说话</span>
+                    <span class="btn-hint">中文 → English</span>
+                </button>
+                
+                <button id="friendBtn" class="btn btn-friend" ontouchstart="startRecording('friend')" ontouchend="stopRecording()" onmousedown="startRecording('friend')" onmouseup="stopRecording()">
+                    <span class="btn-icon">🎙️</span>
+                    <span class="btn-label">Friend Speaks</span>
+                    <span class="btn-hint">English → 中文</span>
+                </button>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button id="clearBtn" class="btn-small" onclick="clearConversation()">
+                    🗑️ 清除 Clear
+                </button>
+            </div>
+
+            <!-- Back Link -->
+            <div class="back-link">
+                <a href="/">← 返回 YouTube 翻译模式</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/conversation.js"></script>
+</body>
+</html>
