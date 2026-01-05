@@ -286,7 +286,7 @@ Output: "在开始之前，请考虑您的用例。"
                                     print(f"⚠️ Could not send Finalize: {e}")
                                 
                                 # Wait for Deepgram to process the finalize request
-                                await asyncio.sleep(2.0)
+                                await asyncio.sleep(3.0)
                                 
                                 # Process whatever is in buffer AND latest
                                 text_to_process = ""
