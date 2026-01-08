@@ -43,6 +43,13 @@ brew install blackhole-2ch
 # that includes both your speakers/headphones and BlackHole 2ch.
 ```
 
+**Windows (for Audio Capture):**
+1. Download and install [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) (free)
+2. Reboot your PC after installation
+3. In Windows Sound Settings:
+   - Set **"CABLE Input (VB-Audio Virtual Cable)"** as the default playback device
+   - This routes all system audio through VB-Cable for capture
+
 ### 2. Environment Configuration
 
 Create a `.env` file in the project root:
@@ -116,6 +123,43 @@ For a simple CLI experience without the web UI.
 
 ---
 
+## Windows Usage
+
+### Option D: Web Server Mode + Windows Audio Bridge
+
+1.  **Start the Server** (in Command Prompt or PowerShell):
+    ```powershell
+    pip install -r requirements.txt
+    python web_server.py
+    ```
+
+2.  **Start the Windows Audio Bridge** (in a separate terminal):
+    ```powershell
+    pip install sounddevice numpy websockets miniaudio
+    python audio_bridge_windows.py
+    ```
+    Select "CABLE Output" as input and your earbuds/headphones as output.
+
+3.  **Access the UI**:
+    Open `https://localhost:5050` in your browser.
+
+### Option E: Standalone Windows Desktop Translator
+
+For a simple CLI experience without the web UI.
+
+1.  **Install Dependencies**:
+    ```powershell
+    pip install -r requirements.txt
+    ```
+
+2.  **Run the Windows Translator**:
+    ```powershell
+    python desktop_translator_windows.py
+    ```
+    Follow the on-screen prompts to select your audio devices.
+
+---
+
 ## Audio Setup Guide (macOS)
 To translate YouTube or system audio:
 1.  Open **Audio MIDI Setup** on macOS.
@@ -123,6 +167,20 @@ To translate YouTube or system audio:
 3.  Select your **Headphones** (Master Device) and **BlackHole 2ch**.
 4.  In your System Settings -> Sound, select this Multi-Output Device as your output.
 5.  Run the translator app (Desktop or Web+Bridge) and select **BlackHole 2ch** as the input source when prompted.
+
+## Audio Setup Guide (Windows)
+To translate YouTube or system audio:
+1.  Install **VB-Audio Virtual Cable** from https://vb-audio.com/Cable/
+2.  Reboot your PC after installation.
+3.  Open **Windows Sound Settings** (right-click speaker icon → Sound settings).
+4.  Under "Output", select **"CABLE Input (VB-Audio Virtual Cable)"** as default.
+5.  Connect your Bluetooth earbuds or headphones.
+6.  Run the translator app (`desktop_translator_windows.py` or Web+Bridge).
+7.  Select **"CABLE Output"** as input source and your **earbuds** as output.
+
+> **Tip**: To hear the original audio + translation simultaneously on Windows, use 
+> [VoiceMeeter Banana](https://vb-audio.com/Voicemeeter/banana.htm) (free) which allows 
+> routing audio to multiple outputs.
 
 ---
 
